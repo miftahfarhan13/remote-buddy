@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remote Buddy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="logo">
+          <span class="logo-icon">🌐</span>
+          <h1>Remote Buddy</h1>
+        </div>
+        <p class="tagline">Instant AI Translation</p>
+      </header>
+
+      <main class="settings-form">
+        <div class="card">
+          <div class="form-group">
+            <label for="service">Translation Service</label>
+            <div class="select-wrapper">
+              <select id="service">
+                <option value="maia">Maia Router</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="deepl">DeepL</option>
+                <option value="openai">OpenAI</option>
+                <option value="mock">Mock (Test)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" id="apiKeyGroup">
+            <label for="apiKey">API Key</label>
+            <input
+              type="password"
+              id="apiKey"
+              placeholder="sk-..."
+              autocomplete="off"
+            />
+            <p class="help-text">Get your key from the provider's dashboard.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="languages-grid">
+            <div class="form-group">
+              <label for="sourceLang">Your Language</label>
+              <div class="select-wrapper">
+                <select id="sourceLang">
+                  <option value="en">English</option>
+                  <option value="id">Indonesian</option>
+                  <option value="ja">Japanese</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="zh">Chinese</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="exchange-icon">⇄</div>
+
+            <div class="form-group">
+              <label for="targetLang">Target Language</label>
+              <div class="select-wrapper">
+                <select id="targetLang">
+                  <option value="id">Indonesian</option>
+                  <option value="en">English</option>
+                  <option value="ja">Japanese</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="zh">Chinese</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <p class="info-text">
+            <span class="info-icon">ℹ️</span>
+            Smart Translate: We'll automatically detect and swap languages based
+            on your input.
+          </p>
+        </div>
+
+        <button id="saveBtn" class="primary-button">
+          <span>Save Settings</span>
+        </button>
+        <div id="status" class="toast">Settings saved!</div>
+      </main>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
