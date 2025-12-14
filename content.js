@@ -22,6 +22,11 @@ document.addEventListener("mousedown", (e) => {
 });
 
 function handleSelection(e) {
+  // Capture coordinates immediately
+  const isMouse = e.type === "mouseup";
+  const clientX = isMouse ? e.clientX : 0;
+  const clientY = isMouse ? e.clientY : 0;
+
   // defer slightly to let selection settle
   setTimeout(() => {
     const selection = window.getSelection();
@@ -36,19 +41,30 @@ function handleSelection(e) {
           activeElement.tagName === "TEXTAREA" ||
           activeElement.isContentEditable);
 
-      showIcon(selection, selectedText, isInput, activeElement);
+      showIcon(selection, selectedText, isInput, activeElement, {
+        clientX,
+        clientY,
+        isMouse,
+      });
     } else {
       removeIcon();
     }
   }, 10);
 }
 
-function showIcon(selection, text, isInput, targetElement) {
+function showIcon(selection, text, isInput, targetElement, coords) {
   if (icon) removeIcon();
   if (tooltip) removeTooltip();
 
   const range = selection.getRangeAt(0);
   const rect = range.getBoundingClientRect();
+
+  // Validate rect - if 0s, it's invalid (common in inputs or hidden elements)
+  const isRectValid = rect.width > 0 || rect.height > 0;
+
+  if (!isRectValid && !coords?.isMouse && !isInput) {
+    return; // Cannot determine position
+  }
 
   icon = document.createElement("div");
   icon.className = "remote-buddy-icon";
@@ -56,8 +72,24 @@ function showIcon(selection, text, isInput, targetElement) {
   icon.title = "Translate with Remote Buddy";
 
   // Position icon
-  const top = rect.top + window.scrollY - 30;
-  const left = rect.left + window.scrollX + rect.width / 2 - 12; // Center it
+  let top, left;
+
+  if (isRectValid) {
+    top = rect.top + window.scrollY - 30;
+    left = rect.left + window.scrollX + rect.width / 2 - 12; // Center it
+  } else if (coords && coords.isMouse) {
+    // Fallback to mouse position
+    top = coords.clientY + window.scrollY - 40;
+    left = coords.clientX + window.scrollX - 12;
+  } else if (targetElement) {
+    // Fallback to target element (e.g. top right corner)
+    const elRect = targetElement.getBoundingClientRect();
+    top = elRect.top + window.scrollY - 30;
+    left = elRect.left + window.scrollX + elRect.width - 20;
+  } else {
+    // Last resort, shouldn't happen given check above
+    return;
+  }
 
   icon.style.top = `${top}px`;
   icon.style.left = `${left}px`;
