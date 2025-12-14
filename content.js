@@ -142,6 +142,25 @@ function translateText(text, isInput, targetElement) {
   const savedWidth = rect.width;
   const savedHeight = rect.height;
 
+  // Check if extension context is valid (can be invalidated if extension is reloaded)
+  if (
+    typeof chrome === "undefined" ||
+    !chrome.runtime ||
+    !chrome.runtime.sendMessage
+  ) {
+    console.error(
+      "Remote Buddy: Extension context invalidated. Please refresh the page."
+    );
+    alert(
+      "Remote Buddy: Extension was reloaded. Please refresh the page to continue using translation."
+    );
+    if (icon) {
+      icon.innerHTML = "あA";
+      icon.dataset.isTranslating = "false";
+    }
+    return;
+  }
+
   chrome.runtime.sendMessage(
     { action: "translate", text: text },
     (response) => {
@@ -195,12 +214,45 @@ function showTooltip(translatedText, iconTop, iconLeft, iconWidth, iconHeight) {
 
   document.body.appendChild(tooltip);
 
-  // Adjust position after render to know height
+  // Adjust position after render to know dimensions
   const tooltipRect = tooltip.getBoundingClientRect();
 
-  // Use passed coordinates (fallback to current icon if available? No, rely on passed)
-  const top = iconTop - tooltipRect.height - 10;
-  const left = iconLeft - tooltipRect.width / 2 + iconWidth / 2;
+  // Calculate the position relative to viewport (not document)
+  const iconViewportTop = iconTop - window.scrollY;
+
+  // Calculate potential top position (above the icon)
+  const topAbove = iconTop - tooltipRect.height - 10;
+  const topAboveViewport = iconViewportTop - tooltipRect.height - 10;
+
+  // Calculate potential bottom position (below the icon)
+  const topBelow = iconTop + iconHeight + 10;
+
+  // Determine if tooltip would be cropped at top of viewport
+  const wouldBeCroppedAtTop = topAboveViewport < 0;
+
+  // Choose position: show below if would be cropped at top, otherwise show above
+  let top;
+  if (wouldBeCroppedAtTop) {
+    top = topBelow;
+    tooltip.classList.add("remote-buddy-tooltip-below");
+  } else {
+    top = topAbove;
+    tooltip.classList.remove("remote-buddy-tooltip-below");
+  }
+
+  // Calculate horizontal position (centered on icon)
+  let left = iconLeft - tooltipRect.width / 2 + iconWidth / 2;
+
+  // Ensure tooltip doesn't go off the left edge
+  if (left < 10) {
+    left = 10;
+  }
+
+  // Ensure tooltip doesn't go off the right edge
+  const maxLeft = document.documentElement.clientWidth - tooltipRect.width - 10;
+  if (left > maxLeft) {
+    left = maxLeft;
+  }
 
   tooltip.style.top = `${top}px`;
   tooltip.style.left = `${left}px`;
