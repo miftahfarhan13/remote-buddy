@@ -99,8 +99,32 @@ function showIcon(selection, text, isInput, targetElement, coords) {
   icon.addEventListener("mousedown", (e) => {
     e.preventDefault(); // Prevent losing selection
     e.stopPropagation();
-    console.log("Remote Buddy: Sending translation request", text);
-    translateText(text, isInput, targetElement);
+
+    // Check if extension context is still valid before attempting translation
+    if (typeof chrome === "undefined" || !chrome.runtime?.id) {
+      console.error("Remote Buddy: Extension context invalidated.");
+      alert(
+        "Remote Buddy: Extension was reloaded. Please refresh the page to continue using translation."
+      );
+      removeIcon();
+      return;
+    }
+
+    try {
+      console.log("Remote Buddy: Sending translation request", text);
+      translateText(text, isInput, targetElement);
+    } catch (error) {
+      console.error("Remote Buddy: Translation error:", error);
+      if (error.message?.includes("Extension context invalidated") ||
+        error.message?.includes("context invalidated")) {
+        alert(
+          "Remote Buddy: Extension was reloaded. Please refresh the page to continue using translation."
+        );
+        removeIcon();
+      } else {
+        alert(`Translation error: ${error.message}`);
+      }
+    }
   });
 
   icon.addEventListener("mouseup", (e) => {
@@ -161,46 +185,90 @@ function translateText(text, isInput, targetElement) {
     return;
   }
 
-  chrome.runtime.sendMessage(
-    { action: "translate", text: text },
-    (response) => {
-      console.log("Remote Buddy: Received response", response);
-
-      if (icon) {
-        icon.dataset.isTranslating = "false";
-      }
-
-      if (response && response.success) {
-        if (isInput) {
-          replaceInputText(response.translation, targetElement);
-          removeIcon();
-        } else {
-          // Pass captured coordinates to showTooltip
-          showTooltip(
-            response.translation,
-            savedTop,
-            savedLeft,
-            savedWidth,
-            savedHeight
+  try {
+    chrome.runtime.sendMessage(
+      { action: "translate", text: text },
+      (response) => {
+        // Check for extension context invalidation error
+        if (chrome.runtime.lastError) {
+          console.error(
+            "Remote Buddy: Message sending failed:",
+            chrome.runtime.lastError.message
           );
-          // Reset icon text if it still exists
+
+          // Check if it's a context invalidation error
+          if (chrome.runtime.lastError.message?.includes("Extension context invalidated") ||
+            chrome.runtime.lastError.message?.includes("context invalidated")) {
+            alert(
+              "Remote Buddy: Extension was reloaded. Please refresh the page to continue using translation."
+            );
+          } else {
+            alert(
+              `Translation failed: ${chrome.runtime.lastError.message}`
+            );
+          }
+
+          if (icon) {
+            icon.innerHTML = "あA";
+            icon.dataset.isTranslating = "false";
+          }
+          return;
+        }
+
+        console.log("Remote Buddy: Received response", response);
+
+        if (icon) {
+          icon.dataset.isTranslating = "false";
+        }
+
+        if (response && response.success) {
+          if (isInput) {
+            replaceInputText(response.translation, targetElement);
+            removeIcon();
+          } else {
+            // Pass captured coordinates to showTooltip
+            showTooltip(
+              response.translation,
+              savedTop,
+              savedLeft,
+              savedWidth,
+              savedHeight
+            );
+            // Reset icon text if it still exists
+            if (icon) icon.innerHTML = "あA";
+          }
+        } else {
+          console.error(
+            "Remote Buddy Translation failed:",
+            response ? response.error : "Unknown error"
+          );
+          alert(
+            `Translation failed: ${response ? response.error : "Check console for details"
+            }`
+          );
+          // Reset icon instead of removing it, so user can try again
           if (icon) icon.innerHTML = "あA";
         }
-      } else {
-        console.error(
-          "Remote Buddy Translation failed:",
-          response ? response.error : "Unknown error"
-        );
-        alert(
-          `Translation failed: ${
-            response ? response.error : "Check console for details"
-          }`
-        );
-        // Reset icon instead of removing it, so user can try again
-        if (icon) icon.innerHTML = "あA";
       }
+    );
+  } catch (error) {
+    console.error("Remote Buddy: Failed to send message:", error);
+
+    // Handle extension context invalidated error
+    if (error.message?.includes("Extension context invalidated") ||
+      error.message?.includes("context invalidated")) {
+      alert(
+        "Remote Buddy: Extension was reloaded. Please refresh the page to continue using translation."
+      );
+    } else {
+      alert(`Translation failed: ${error.message}`);
     }
-  );
+
+    if (icon) {
+      icon.innerHTML = "あA";
+      icon.dataset.isTranslating = "false";
+    }
+  }
 }
 
 function showTooltip(translatedText, iconTop, iconLeft, iconWidth, iconHeight) {
